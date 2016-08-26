@@ -283,7 +283,6 @@ bool CDrivechainTreeDB::WriteDrivechainIndex(const std::vector<std::pair<uint256
     return WriteBatch(batch);
 }
 
-//bool CDrivechainTreeDB::ReadFlag(const string &name, bool fValue)
 bool CDrivechainTreeDB::ReadFlag(const std::string &name, bool &fValue) {
     char ch;
     if (!Read(make_pair(DB_FLAG, name), ch))
@@ -294,4 +293,94 @@ bool CDrivechainTreeDB::ReadFlag(const std::string &name, bool &fValue) {
 
 bool CDrivechainTreeDB::WriteFlag(const std::string &name, bool fValue) {
     return Write(std::make_pair(DB_FLAG, name), fValue ? '1' : '0');
+}
+
+bool CDrivechainTreeDB::GetDeposit(const uint256 &objid, drivechainDeposit &deposit)
+{
+    if (Read(make_pair('D', objid), deposit))
+        return true;
+
+    return false;
+}
+
+bool CDrivechainTreeDB::GetWithdraw(const uint256 &objid, drivechainWithdraw &withdraw)
+{
+    if (Read(make_pair('W', objid), withdraw))
+        return true;
+
+    return false;
+}
+
+bool CDrivechainTreeDB::GetJoinedWT(const uint256 &objid, drivechainJoinedWT &joinedWT)
+{
+    if (Read(make_pair('J', objid), joinedWT))
+        return true;
+
+    return false;
+}
+
+vector<drivechainDeposit> CDrivechainTreeDB::GetDeposits()
+{
+    const char drivechainop = 'D';
+    ostringstream ss;
+    ss << drivechainop;
+
+    vector<drivechainDeposit> vDeposit;
+    boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
+    for (pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
+        boost::this_thread::interruption_point();
+
+        std::pair<char, uint256> key;
+        drivechainDeposit deposit;
+        if (pcursor->GetKey(key) && key.first == drivechainop) {
+            if (pcursor->GetValue(deposit))
+                vDeposit.push_back(deposit);
+        }
+    }
+
+    return vDeposit;
+}
+
+vector<drivechainWithdraw> CDrivechainTreeDB::GetWithdraws()
+{
+    const char drivechainop = 'W';
+    ostringstream ss;
+    ss << drivechainop;
+
+    vector<drivechainWithdraw> vWithdraw;
+    boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
+    for (pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
+        boost::this_thread::interruption_point();
+
+        std::pair<char, uint256> key;
+        drivechainWithdraw withdraw;
+        if (pcursor->GetKey(key) && key.first == drivechainop) {
+            if (pcursor->GetValue(withdraw))
+                vWithdraw.push_back(withdraw);
+        }
+    }
+
+    return vWithdraw;
+}
+
+vector<drivechainJoinedWT> CDrivechainTreeDB::GetJoinedWTs()
+{
+    const char drivechainop = 'J';
+    ostringstream ss;
+    ss << drivechainop;
+
+    vector<drivechainJoinedWT> vJoinedWT;
+    boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
+    for (pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
+        boost::this_thread::interruption_point();
+
+        std::pair<char, uint256> key;
+        drivechainJoinedWT joinedWT;
+        if (pcursor->GetKey(key) && key.first == drivechainop) {
+            if (pcursor->GetValue(joinedWT))
+                vJoinedWT.push_back(joinedWT);
+        }
+    }
+
+    return vJoinedWT;
 }

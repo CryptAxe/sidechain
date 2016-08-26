@@ -118,5 +118,4 @@ struct drivechainJoinedWT: public drivechainObj {
     string ToString(void) const;
 };
 
-
 #endif // DRIVECHAIN_H
