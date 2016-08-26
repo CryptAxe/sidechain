@@ -81,17 +81,17 @@ void getDrivechainTX(CMutableTransaction &mtx, uint32_t height)
     if (!pdrivechaintree) return;
 
     DrivechainClient client;
-    std::vector<drivechainIncoming> vIncoming = client.getDeposits(SIDECHAIN_ID, chainActive.Tip()->nHeight);
+    std::vector<drivechainDeposit> vDeposit = client.getDeposits(SIDECHAIN_ID, chainActive.Tip()->nHeight);
 
-    for (size_t i = 0; i < vIncoming.size(); i++) {
+    for (size_t i = 0; i < vDeposit.size(); i++) {
         // Check deposit TODO
 
         // Create a database entry noting that this deposit is complete
-        mtx.vout.push_back(CTxOut(1000000, vIncoming[i].GetScript()));
+        mtx.vout.push_back(CTxOut(1000000, vDeposit[i].GetScript()));
 
         // Pay keyID the deposit
         CScript script;
-        script << OP_DUP << OP_HASH160 << ToByteVector(vIncoming[i].keyID) << OP_EQUALVERIFY << OP_CHECKSIG;
+        script << OP_DUP << OP_HASH160 << ToByteVector(vDeposit[i].keyID) << OP_EQUALVERIFY << OP_CHECKSIG;
         mtx.vout.push_back(CTxOut(1000000, script));
     }
 }

@@ -262,15 +262,21 @@ bool CDrivechainTreeDB::WriteDrivechainIndex(const std::vector<std::pair<uint256
         const drivechainObj *obj = it->second;
         pair<char, uint256> key = make_pair(obj->drivechainop, objid);
 
-        if (obj->drivechainop == 'I') {
-            const drivechainIncoming *ptr = (const drivechainIncoming *) obj;
-            pair<drivechainIncoming, uint256> value = make_pair(*ptr, obj->txid);
+        if (obj->drivechainop == 'D') {
+            const drivechainDeposit *ptr = (const drivechainDeposit *) obj;
+            pair<drivechainDeposit, uint256> value = make_pair(*ptr, obj->txid);
             batch.Write(key, value);
         }
         else
-        if (obj->drivechainop == 'O') {
-            const drivechainOutgoing *ptr = (const drivechainOutgoing *) obj;
-            pair<drivechainOutgoing, uint256> value = make_pair(*ptr, obj->txid);
+        if (obj->drivechainop == 'W') {
+            const drivechainWithdraw *ptr = (const drivechainWithdraw *) obj;
+            pair<drivechainWithdraw, uint256> value = make_pair(*ptr, obj->txid);
+            batch.Write(key, value);
+        }
+        else
+        if (obj->drivechainop == 'J') {
+            const drivechainJoinedWT *ptr = (const drivechainJoinedWT *) obj;
+            pair<drivechainJoinedWT, uint256> value = make_pair(*ptr, obj->txid);
             batch.Write(key, value);
         }
     }

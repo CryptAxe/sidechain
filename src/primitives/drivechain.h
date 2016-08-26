@@ -41,16 +41,16 @@ struct drivechainObj {
 drivechainObj *drivechainObjCtr(const CScript &script);
 
 /**
- * Incoming drivechain transaction
+ * Drivechain deposit from mainchain
  */
-struct drivechainIncoming : public drivechainObj {
+struct drivechainDeposit : public drivechainObj {
     uint256 txid;
     uint256 sidechainid;
     CKeyID keyID;
     CTransaction deposit;
 
-    drivechainIncoming(void) : drivechainObj() { drivechainop = 'I'; }
-    virtual ~drivechainIncoming(void) { }
+    drivechainDeposit(void) : drivechainObj() { drivechainop = 'D'; }
+    virtual ~drivechainDeposit(void) { }
 
     ADD_SERIALIZE_METHODS
 
@@ -67,16 +67,16 @@ struct drivechainIncoming : public drivechainObj {
 };
 
 /**
- * Outgoing drivechain transaction
+ * An individual drivechain withdraw to mainchain (wt)
  */
-struct drivechainOutgoing : public drivechainObj {
+struct drivechainWithdraw : public drivechainObj {
     uint256 txid;
     uint256 sidechainid;
     CKeyID keyID;
     CTransaction wt;
 
-    drivechainOutgoing(void) : drivechainObj() { drivechainop = 'O'; }
-    virtual ~drivechainOutgoing(void) { }
+    drivechainWithdraw(void) : drivechainObj() { drivechainop = 'W'; }
+    virtual ~drivechainWithdraw(void) { }
 
     ADD_SERIALIZE_METHODS
 
@@ -84,9 +84,39 @@ struct drivechainOutgoing : public drivechainObj {
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         READWRITE(drivechainop);
         READWRITE(txid);
+        READWRITE(sidechainid);
+        READWRITE(keyID);
+        READWRITE(wt);
     }
 
     string ToString(void) const;
 };
+
+/**
+ * Joined drivechain withdraw(s) to mainchain (WT^)
+ */
+struct drivechainJoinedWT: public drivechainObj {
+    uint256 txid;
+    uint256 sidechainid;
+    CKeyID keyID;
+    CTransaction wtJoined;
+
+    drivechainJoinedWT(void) : drivechainObj() { drivechainop = 'J'; }
+    virtual ~drivechainJoinedWT(void) { }
+
+    ADD_SERIALIZE_METHODS
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+        READWRITE(drivechainop);
+        READWRITE(txid);
+        READWRITE(sidechainid);
+        READWRITE(keyID);
+        READWRITE(wtJoined);
+    }
+
+    string ToString(void) const;
+};
+
 
 #endif // DRIVECHAIN_H

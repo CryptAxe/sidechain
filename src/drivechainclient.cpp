@@ -38,10 +38,10 @@ bool DrivechainClient::sendDrivechainWT(uint256 txid, std::string hex)
     return sendRequestToMainchain(json, ptree);
 }
 
-std::vector<drivechainIncoming> DrivechainClient::getDeposits(uint256 sidechainid, uint32_t height)
+std::vector<drivechainDeposit> DrivechainClient::getDeposits(uint256 sidechainid, uint32_t height)
 {
     // List of deposits in drivechain format for DB
-    std::vector<drivechainIncoming> incoming;
+    std::vector<drivechainDeposit> incoming;
 
     // JSON for requesting drivechain deposits via mainchain HTTP-RPC
     std::string json;
@@ -61,7 +61,7 @@ std::vector<drivechainIncoming> DrivechainClient::getDeposits(uint256 sidechaini
     // Process deposits
     BOOST_FOREACH(boost::property_tree::ptree::value_type &value, ptree.get_child("result")) {
         // Looping through list of deposits
-        drivechainIncoming deposit;
+        drivechainDeposit deposit;
         BOOST_FOREACH(boost::property_tree::ptree::value_type &v, value.second.get_child("")) {
             // Looping through this deposit's members
             std::string data = v.second.data();
@@ -75,7 +75,7 @@ std::vector<drivechainIncoming> DrivechainClient::getDeposits(uint256 sidechaini
             // TODO Actually, just get the deposit hash, and add a
             // function to the drivechain client that can deserialize
             // the deposit, take those values and create a drivechain
-            // incoming object.
+            // deposit object.
             if (data.at(0) == '1' && data.length() == 40) {
                 // KeyID
                 deposit.keyID.SetHex(data);
