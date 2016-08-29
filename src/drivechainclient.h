@@ -17,7 +17,7 @@ class DrivechainClient
 public:
     DrivechainClient();
 
-    bool sendDrivechainWT(uint256 txid, string hex);
+    bool sendDrivechainWT(uint256 wtjid, string hex);
 
     std::vector<drivechainDeposit> getDeposits(uint256 sidechainid, uint32_t height);
 

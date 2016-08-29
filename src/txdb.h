@@ -83,11 +83,11 @@ public:
     bool ReadFlag(const std::string &name, bool &fValue);
 
     bool GetDeposit(const uint256 & /* Deposit ID */, drivechainDeposit &deposit);
-    bool GetWithdraw(const uint256 & /* wt ID */, drivechainWithdraw &withdraw);
+    bool GetWT(const uint256 & /* wt ID */, drivechainWithdraw &withdraw);
     bool GetJoinedWT(const uint256 & /* WT^ ID */, drivechainJoinedWT &joinedWT);
 
     vector<drivechainDeposit> GetDeposits();
-    vector<drivechainWithdraw> GetWithdraws();
+    vector<drivechainWithdraw> GetWTs();
     vector<drivechainJoinedWT> GetJoinedWTs();
 };
 

@@ -21,14 +21,14 @@ DrivechainClient::DrivechainClient()
 
 }
 
-bool DrivechainClient::sendDrivechainWT(uint256 txid, std::string hex)
+bool DrivechainClient::sendDrivechainWT(uint256 wtjid, std::string hex)
 {
     // JSON for sending the WT^ to mainchain via HTTP-RPC
     std::string json;
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"drivechainclient\", ");
     json.append("\"method\": \"receivesidechainwt\", \"params\": ");
     json.append("[\"");
-    json.append(txid.GetHex());
+    json.append(wtjid.GetHex());
     json.append("\",\"");
     json.append(hex);
     json.append("\"] }");
@@ -67,8 +67,6 @@ std::vector<drivechainDeposit> DrivechainClient::getDeposits(uint256 sidechainid
             std::string data = v.second.data();
             if (!data.length())
                 continue;
-
-            std::cout << "getDeposits v: " << data << std::endl; // TODO
 
             // TODO this better, use json keypairs in server response
 
@@ -131,7 +129,6 @@ bool DrivechainClient::sendRequestToMainchain(const string json, boost::property
 
         // Send the request
         boost::asio::write(socket, output);
-        boost::asio::streambuf res;
 
         // TODO use boost's read function instead
 
@@ -166,7 +163,6 @@ bool DrivechainClient::sendRequestToMainchain(const string json, boost::property
 
         std::string JSON;
         ss >> JSON;
-        std::cout << "JSON: \n" << JSON << std::endl; // TODO
 
         std::stringstream jss;
         jss << JSON;

@@ -303,7 +303,7 @@ bool CDrivechainTreeDB::GetDeposit(const uint256 &objid, drivechainDeposit &depo
     return false;
 }
 
-bool CDrivechainTreeDB::GetWithdraw(const uint256 &objid, drivechainWithdraw &withdraw)
+bool CDrivechainTreeDB::GetWT(const uint256 &objid, drivechainWithdraw &withdraw)
 {
     if (Read(make_pair('W', objid), withdraw))
         return true;
@@ -341,7 +341,7 @@ vector<drivechainDeposit> CDrivechainTreeDB::GetDeposits()
     return vDeposit;
 }
 
-vector<drivechainWithdraw> CDrivechainTreeDB::GetWithdraws()
+vector<drivechainWithdraw> CDrivechainTreeDB::GetWTs()
 {
     const char drivechainop = 'W';
     ostringstream ss;
