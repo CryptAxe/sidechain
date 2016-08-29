@@ -12,13 +12,13 @@
 #include "consensus/consensus.h"
 #include "consensus/merkle.h"
 #include "consensus/validation.h"
+#include "core_io.h"
 #include "drivechainclient.h"
 #include "hash.h"
 #include "main.h"
 #include "net.h"
 #include "policy/policy.h"
 #include "pow.h"
-#include "primitives/drivechain.h"
 #include "primitives/transaction.h"
 #include "script/standard.h"
 #include "timedata.h"
@@ -76,26 +76,6 @@ int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParam
     return nNewTime - nOldTime;
 }
 
-void getDrivechainTX(CMutableTransaction &mtx, uint32_t height)
-{
-    if (!pdrivechaintree) return;
-
-    DrivechainClient client;
-    std::vector<drivechainDeposit> vDeposit = client.getDeposits(SIDECHAIN_ID, chainActive.Tip()->nHeight);
-
-    for (size_t i = 0; i < vDeposit.size(); i++) {
-        // Check deposit TODO
-
-        // Create a database entry noting that this deposit is complete
-        mtx.vout.push_back(CTxOut(1000000, vDeposit[i].GetScript()));
-
-        // Pay keyID the deposit
-        CScript script;
-        script << OP_DUP << OP_HASH160 << ToByteVector(vDeposit[i].keyID) << OP_EQUALVERIFY << OP_CHECKSIG;
-        mtx.vout.push_back(CTxOut(1000000, script));
-    }
-}
-
 CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& scriptPubKeyIn)
 {
     // Create new block
@@ -116,9 +96,13 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& s
     pblocktemplate->vTxFees.push_back(-1); // updated at end
     pblocktemplate->vTxSigOps.push_back(-1); // updated at end
 
-    // Create drivechain tx
-    uint32_t height = chainActive.Height() + 1;
-    getDrivechainTX(txNew, height);
+    // get the deposit ctransaction
+    // add it to txnew coinbase transaction
+    CTransaction depositTX = GetDepositTX(chainActive.Height() + 1);
+
+    // get the wt^ ctransaction
+    // add it to txnew coinbase transaction
+    CTransaction wtJoinTX = GetWTJoinTX(chainActive.Height() + 1);
 
     // Largest block you're willing to create:
     unsigned int nBlockMaxSize = GetArg("-blockmaxsize", DEFAULT_BLOCK_MAX_SIZE);
@@ -308,11 +292,35 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& s
         // Compute final coinbase transaction.
         txNew.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
 
-        if (txNew.vout.size() > 2) {
-            // TODO Do not limit deposits to block subsidy
-            // Subtract DB entry and payout
-            txNew.vout[0].nValue -= txNew.vout[1].nValue;
-            txNew.vout[0].nValue -= txNew.vout[2].nValue;
+        if (depositTX.vout.size()) {
+            // Payout deposits from block reward
+            for (size_t i = 0; i < depositTX.vout.size(); i++)
+                txNew.vout[0].nValue -= depositTX.vout[i].nValue;
+        }
+
+        if (wtJoinTX.vout.size()) {
+            drivechainJoinedWT wtj;
+            wtj.sidechainid = SIDECHAIN_ID;
+            wtj.wtJoined = wtJoinTX;
+
+            // Create DB entry
+
+            // Check for duplicate
+            drivechainJoinedWT dup;
+            if (pdrivechaintree->GetJoinedWT(wtj.GetHash(), dup)) {
+                // TODO
+                throw std::runtime_error(strprintf("%s: CreateNewBlock failed: duplicate WT^", __func__));
+            }
+
+            txNew.vout.push_back(CTxOut(1000000, wtj.GetScript()));
+            // Subtract from subsidy
+            txNew.vout[0].nValue -= 1000000;
+
+            DrivechainClient client;
+            if (!client.sendDrivechainWT(SIDECHAIN_ID, EncodeHexTx(wtj.wtJoined))) {
+                // TODO
+                throw std::runtime_error(strprintf("%s: CreateNewBlock failed: failed to broadcast WT^", __func__));
+            }
         }
 
         txNew.vin[0].scriptSig = CScript() << nHeight << OP_0;
@@ -555,4 +563,87 @@ void GenerateBitcoins(bool fGenerate, int nThreads, const CChainParams& chainpar
     minerThreads = new boost::thread_group();
     for (int i = 0; i < nThreads; i++)
         minerThreads->create_thread(boost::bind(&BitcoinMiner, boost::cref(chainparams)));
+}
+
+CTransaction GetDepositTX(uint32_t nHeight)
+{
+    if (!pdrivechaintree) return CTransaction();
+
+    DrivechainClient client;
+    std::vector<drivechainDeposit> vDeposit;
+    vDeposit = client.getDeposits(SIDECHAIN_ID, nHeight);
+
+    CMutableTransaction mtx;
+
+    for (size_t i = 0; i < vDeposit.size(); i++) {
+        // Create deposit DB entry
+        mtx.vout.push_back(CTxOut(1000000, vDeposit[i].GetScript()));
+
+        // Pay keyID the deposit
+        CScript script;
+        script << OP_DUP << OP_HASH160 << ToByteVector(vDeposit[i].keyID) << OP_EQUALVERIFY << OP_CHECKSIG;
+        mtx.vout.push_back(CTxOut(vDeposit[i].deposit.GetValueOut(), script));
+    }
+
+    return mtx;
+}
+
+CTransaction GetWTJoinTX(uint32_t nHeight)
+{
+    if (!pdrivechaintree) return CTransaction();
+
+    // Get all of the wt(s)
+    std::vector<drivechainWithdraw> vWithdraw;
+    vWithdraw = pdrivechaintree->GetWTs();
+
+    // TODO filter
+    // Filtered list of wt(s) to be joined for WT^
+    std::vector<drivechainWithdraw> toJoin;
+    for (size_t i = 0; i < vWithdraw.size(); i++) {
+        toJoin.push_back(vWithdraw[i]);
+    }
+
+    // tempFee is a tempory hack, all of the users in the WT^ join
+    // need to contribute to the "groupFee" enough to cover their
+    // output. TODO calculate the min for each wt
+    CAmount tempFee = 1000000;
+
+    // groupFee is the actual sum of all of the fees being paid
+    // by individuals in the WT^ join.
+    CAmount groupFee = 0;
+
+    // WT^
+    CMutableTransaction mtx;
+
+    // Add the wt's to the WT^
+    for (size_t i = 0; i < toJoin.size(); i++) {
+        // Amount
+        CTransaction wt;
+        uint256 hashBlock;
+        // Note: Slow tx lookup
+        GetTransaction(toJoin[i].txid, wt, Params().GetConsensus(), hashBlock, true);
+
+        CAmount amount = wt.GetValueOut();
+
+        // Group Fee
+        amount -= tempFee;
+        groupFee += tempFee;
+
+        // Output to mainchain keyID
+        CScript script;
+        script << OP_DUP << OP_HASH160 << ToByteVector(toJoin[i].keyID) << OP_EQUALVERIFY << OP_CHECKSIG;
+        mtx.vout.push_back(CTxOut(amount, script));
+    }
+
+    // Did anything make it into the WT^?
+    if (!mtx.vout.size())
+        return CTransaction();
+
+    // Add joined fee
+    if (groupFee > 0)
+        mtx.vout.push_back(CTxOut(groupFee, SIDECHAIN_FEESCRIPT));
+
+    // TODO find & add inputs from the sidechain side
+
+    return mtx;
 }
