@@ -66,6 +66,7 @@ int nScriptCheckThreads = 0;
 bool fImporting = false;
 bool fReindex = false;
 bool fTxIndex = false;
+bool fDrivechainIndex = true;
 bool fHavePruned = false;
 bool fPruneMode = false;
 bool fIsBareMultisigStd = DEFAULT_PERMIT_BAREMULTISIG;
@@ -2422,6 +2423,37 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     if (fTxIndex)
         if (!pblocktree->WriteTxIndex(vPos))
             return AbortNode(state, "Failed to write transaction index");
+
+    if (fDrivechainIndex && pdrivechaintree) {
+        // Collect drivechain objects
+        std::vector<std::pair<uint256, const drivechainObj *> > vDrivechainObjects;
+        for (size_t i = 0; i < block.vtx.size(); i++) {
+            const CTransaction &tx = block.vtx[i];
+            BOOST_FOREACH(const CTxOut& txout, tx.vout) {
+                const CScript& scriptPubKey = txout.scriptPubKey;
+                size_t script_sz = scriptPubKey.size();
+                if ((script_sz < 2) || (scriptPubKey[script_sz -1] != OP_DRIVECHAIN))
+                    continue;
+
+                drivechainObj *obj = drivechainObjCtr(scriptPubKey);
+                if (!obj)
+                    continue;
+
+                obj->txid = tx.GetHash();
+                vDrivechainObjects.push_back(std::make_pair(obj->GetHash(), obj));
+            }
+        }
+
+        // Write drivechain objects to DB
+        if (vDrivechainObjects.size()) {
+            bool ret = pdrivechaintree->WriteDrivechainIndex(vDrivechainObjects);
+            if (!ret)
+                return state.Error("Failed to write drivechain index!");
+
+            for (size_t i = 0; i < vDrivechainObjects.size(); i++)
+                delete vDrivechainObjects[i].second;
+        }
+    }
 
     // add this block to the view's block chain
     view.SetBestBlock(pindex->GetBlockHash());
