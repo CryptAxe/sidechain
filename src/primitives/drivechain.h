@@ -10,6 +10,7 @@
 #include "script/script.h"
 #include "serialize.h"
 #include "uint256.h"
+#include "utilstrencodings.h"
 
 #include <limits.h>
 #include <string>
@@ -18,6 +19,11 @@ using namespace std;
 
 // uint256 hash (sidechainid) of THIS sidechain
 static const uint256 SIDECHAIN_ID = uint256S("0xca85db47c45dfccfa9f5562f7383c7b3fe1746017327371771ed3f70345b72d4");
+
+// mnPGuDbviWX4xR72mUXqVAJJUjj68Vh7eG
+// cQv4JP3XDivx3CjoSoe1dw2KtGr1KqLn7yLAe7gGK5ScaUedP6MS
+// "0201060ed986a0dda4caa2ed26a3d6c26f604811895a6ed3459fe3b5e3cec99b23"
+static const CScript SIDECHAIN_FEESCRIPT = CScript() << OP_DUP << OP_HASH160 << ParseHex("0201060ed986a0dda4caa2ed26a3d6c26f604811895a6ed3459fe3b5e3cec99b23") << OP_EQUALVERIFY << OP_CHECKSIG;
 
 /**
  * Drivechain object for database
@@ -44,7 +50,6 @@ drivechainObj *drivechainObjCtr(const CScript &script);
  * Drivechain deposit from mainchain
  */
 struct drivechainDeposit : public drivechainObj {
-    uint256 txid;
     uint256 sidechainid;
     CKeyID keyID;
     CTransaction deposit;
@@ -57,7 +62,6 @@ struct drivechainDeposit : public drivechainObj {
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         READWRITE(drivechainop);
-        READWRITE(txid);
         READWRITE(sidechainid);
         READWRITE(keyID);
         READWRITE(deposit);
@@ -70,7 +74,6 @@ struct drivechainDeposit : public drivechainObj {
  * An individual drivechain withdraw to mainchain (wt)
  */
 struct drivechainWithdraw : public drivechainObj {
-    uint256 txid;
     uint256 sidechainid;
     CKeyID keyID;
     CTransaction wt;
@@ -83,7 +86,6 @@ struct drivechainWithdraw : public drivechainObj {
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         READWRITE(drivechainop);
-        READWRITE(txid);
         READWRITE(sidechainid);
         READWRITE(keyID);
         READWRITE(wt);
@@ -96,9 +98,7 @@ struct drivechainWithdraw : public drivechainObj {
  * Joined drivechain withdraw(s) to mainchain (WT^)
  */
 struct drivechainJoinedWT: public drivechainObj {
-    uint256 txid;
     uint256 sidechainid;
-    CKeyID keyID;
     CTransaction wtJoined;
 
     drivechainJoinedWT(void) : drivechainObj() { drivechainop = 'J'; }
@@ -109,9 +109,7 @@ struct drivechainJoinedWT: public drivechainObj {
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         READWRITE(drivechainop);
-        READWRITE(txid);
         READWRITE(sidechainid);
-        READWRITE(keyID);
         READWRITE(wtJoined);
     }
 
