@@ -297,7 +297,7 @@ bool CDrivechainTreeDB::WriteFlag(const std::string &name, bool fValue) {
 
 bool CDrivechainTreeDB::GetDeposit(const uint256 &objid, drivechainDeposit &deposit)
 {
-    if (Read(make_pair('D', objid), deposit))
+    if (ReadDrivechain(make_pair('D', objid), deposit))
         return true;
 
     return false;
@@ -305,7 +305,7 @@ bool CDrivechainTreeDB::GetDeposit(const uint256 &objid, drivechainDeposit &depo
 
 bool CDrivechainTreeDB::GetWT(const uint256 &objid, drivechainWithdraw &withdraw)
 {
-    if (Read(make_pair('W', objid), withdraw))
+    if (ReadDrivechain(make_pair('W', objid), withdraw))
         return true;
 
     return false;
@@ -313,7 +313,7 @@ bool CDrivechainTreeDB::GetWT(const uint256 &objid, drivechainWithdraw &withdraw
 
 bool CDrivechainTreeDB::GetJoinedWT(const uint256 &objid, drivechainJoinedWT &joinedWT)
 {
-    if (Read(make_pair('J', objid), joinedWT))
+    if (ReadDrivechain(make_pair('J', objid), joinedWT))
         return true;
 
     return false;
@@ -333,7 +333,7 @@ vector<drivechainDeposit> CDrivechainTreeDB::GetDeposits()
         std::pair<char, uint256> key;
         drivechainDeposit deposit;
         if (pcursor->GetKey(key) && key.first == drivechainop) {
-            if (pcursor->GetValue(deposit))
+            if (pcursor->GetDrivechainValue(deposit))
                 vDeposit.push_back(deposit);
         }
     }
@@ -355,7 +355,7 @@ vector<drivechainWithdraw> CDrivechainTreeDB::GetWTs()
         std::pair<char, uint256> key;
         drivechainWithdraw withdraw;
         if (pcursor->GetKey(key) && key.first == drivechainop) {
-            if (pcursor->GetValue(withdraw))
+            if (pcursor->GetDrivechainValue(withdraw))
                 vWithdraw.push_back(withdraw);
         }
     }
@@ -377,7 +377,7 @@ vector<drivechainJoinedWT> CDrivechainTreeDB::GetJoinedWTs()
         std::pair<char, uint256> key;
         drivechainJoinedWT joinedWT;
         if (pcursor->GetKey(key) && key.first == drivechainop) {
-            if (pcursor->GetValue(joinedWT))
+            if (pcursor->GetDrivechainValue(joinedWT))
                 vJoinedWT.push_back(joinedWT);
         }
     }

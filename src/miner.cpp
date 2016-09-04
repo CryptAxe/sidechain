@@ -303,18 +303,13 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& s
             wtj.sidechainid = SIDECHAIN_ID;
             wtj.wtJoined = wtJoinTX;
 
-            // Create DB entry
-
-            // Check for duplicate
+            // Create DB entry if not already added
             drivechainJoinedWT dup;
-            if (pdrivechaintree->GetJoinedWT(wtj.GetHash(), dup)) {
-                // TODO
-                throw std::runtime_error(strprintf("%s: CreateNewBlock failed: duplicate WT^", __func__));
+            if (!pdrivechaintree->GetJoinedWT(wtj.GetHash(), dup)) {
+                txNew.vout.push_back(CTxOut(1000000, wtj.GetScript()));
+                // Subtract from subsidy
+                txNew.vout[0].nValue -= 1000000;
             }
-
-            txNew.vout.push_back(CTxOut(1000000, wtj.GetScript()));
-            // Subtract from subsidy
-            txNew.vout[0].nValue -= 1000000;
 
             DrivechainClient client;
             if (!client.sendDrivechainWT(SIDECHAIN_ID, EncodeHexTx(wtj.wtJoined))) {

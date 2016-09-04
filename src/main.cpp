@@ -79,6 +79,23 @@ uint64_t nPruneTarget = 0;
 bool fAlerts = DEFAULT_ALERTS;
 bool fEnableReplacement = DEFAULT_ENABLE_REPLACEMENT;
 
+uint32_t GetDrivechainObjectHeight(drivechainObj &obj)
+{
+    uint32_t height = (uint32_t) (-1);
+
+    // If the obj exists on the blockchain, get the nHeight
+    CTransaction tx;
+    uint256 hashBlock;
+
+    if (GetTransaction(obj.txid, tx, Params().GetConsensus(),  hashBlock, true)) {
+        CBlockIndex *pindex = (*mapBlockIndex.find(hashBlock)).second;
+        if (pindex && chainActive.Contains(pindex))
+            height = pindex->nHeight;
+    }
+
+    return height;
+}
+
 /** Fees smaller than this (in satoshi) are considered zero fee (for relaying, mining and transaction creation) */
 CFeeRate minRelayTxFee = CFeeRate(DEFAULT_MIN_RELAY_TX_FEE);
 
