@@ -577,7 +577,7 @@ CTransaction GetDepositTX(uint32_t nHeight)
         // Pay keyID the deposit
         CScript script;
         script << OP_DUP << OP_HASH160 << ToByteVector(vDeposit[i].keyID) << OP_EQUALVERIFY << OP_CHECKSIG;
-        mtx.vout.push_back(CTxOut(vDeposit[i].deposit.GetValueOut(), script));
+        mtx.vout.push_back(CTxOut(vDeposit[i].deposit.GetValueOutToDrivechain(), script));
     }
 
     return mtx;
@@ -588,8 +588,7 @@ CTransaction GetWTJoinTX(uint32_t nHeight)
     if (!pdrivechaintree) return CTransaction();
 
     // Get all of the wt(s)
-    std::vector<drivechainWithdraw> vWithdraw;
-    vWithdraw = pdrivechaintree->GetWTs();
+    std::vector<drivechainWithdraw> vWithdraw = pdrivechaintree->GetWTs();
 
     // TODO filter
     // Filtered list of wt(s) to be joined for WT^
@@ -598,14 +597,15 @@ CTransaction GetWTJoinTX(uint32_t nHeight)
         toJoin.push_back(vWithdraw[i]);
     }
 
-    // tempFee is a tempory hack, all of the users in the WT^ join
-    // need to contribute to the "groupFee" enough to cover their
-    // output. TODO calculate the min for each wt
+    // TODO calculate the min for each wt
     CAmount tempFee = 1000000;
 
     // groupFee is the actual sum of all of the fees being paid
     // by individuals in the WT^ join.
     CAmount groupFee = 0;
+
+    // Total amount to cover with deposits
+    CAmount totalWithdraw = 0;
 
     // WT^
     CMutableTransaction mtx;
@@ -618,11 +618,14 @@ CTransaction GetWTJoinTX(uint32_t nHeight)
         // Note: Slow tx lookup
         GetTransaction(toJoin[i].txid, wt, Params().GetConsensus(), hashBlock, true);
 
-        CAmount amount = wt.GetValueOut();
+        CAmount amount = wt.GetValueOutToDrivechain();
 
         // Group Fee
         amount -= tempFee;
         groupFee += tempFee;
+
+        // Total withdraw payout
+        totalWithdraw += amount;
 
         // Output to mainchain keyID
         CScript script;
@@ -631,14 +634,26 @@ CTransaction GetWTJoinTX(uint32_t nHeight)
     }
 
     // Did anything make it into the WT^?
-    if (!mtx.vout.size())
-        return CTransaction();
+    if (!mtx.vout.size()) return CTransaction();
 
     // Add joined fee
     if (groupFee > 0)
         mtx.vout.push_back(CTxOut(groupFee, SIDECHAIN_FEESCRIPT));
 
-    // TODO find & add inputs from the sidechain side
+    // Add inputs
+    std::vector<drivechainDeposit> vDeposit = pdrivechaintree->GetDeposits();
+    for (size_t x = 0; x < vDeposit.size(); x++) {
+        if (totalWithdraw == 0) break;
+        // Subtract deposit amount from total
+        totalWithdraw -= vDeposit[x].deposit.GetValueOutToDrivechain();
+
+        for (size_t y = 0; y < vDeposit[x].deposit.vout.size(); y++) {
+           CTxIn in(vDeposit[x].deposit.GetHash(), y);
+           mtx.vin.push_back(in);
+        }
+
+        // Erase deposit from DB TODO
+    }
 
     return mtx;
 }
