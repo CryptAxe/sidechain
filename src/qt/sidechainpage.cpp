@@ -12,6 +12,7 @@
 
 #include <QApplication>
 #include <QClipboard>
+#include <QDialog>
 #include <QStackedWidget>
 
 SidechainPage::SidechainPage(QWidget *parent) :
@@ -76,35 +77,51 @@ void SidechainPage::on_pushButtonNew_clicked()
 void SidechainPage::on_pushButtonWT_clicked()
 {
     if (!validate()) return;
+    if (!pdrivechaintree) return;
+    if (pwalletMain->IsLocked()) return;
 
+    // WT
     drivechainWithdraw wt;
-    CBitcoinAddress address(ui->payTo->text().toStdString());
 
+    // Set wt KeyID
+    CBitcoinAddress address(ui->payTo->text().toStdString());
     if (!address.GetKeyID(wt.keyID)) {
-        // TODO ERROR MESSAGE
+        // TODO make pretty
+        QDialog error;
+        error.setWindowTitle("Invalid address");
+        error.exec();
         return;
     }
 
+    // Set wt sidechain ID
     wt.sidechainid = SIDECHAIN_ID;
 
-    CReserveKey reserveKey(pwalletMain);
-    CAmount nFeeRequired;
-
-    vector<CRecipient> vecSend;
+    // Send payment to the wt script
+    std::vector<CRecipient> vecSend;
     CRecipient recipient = {wt.GetScript(), ui->payAmount->value(), false};
     vecSend.push_back(recipient);
 
-    int nChangePos = -1;
-
     CWalletTx wtx;
+    CReserveKey reserveKey(pwalletMain);
+    CAmount nFee;
+    int nChangePos = -1;
     std::string strError;
-    if (!pwalletMain->CreateTransaction(vecSend, wtx, reserveKey, nFeeRequired, nChangePos, strError))
+    if (!pwalletMain->CreateTransaction(vecSend, wtx, reserveKey, nFee, nChangePos, strError))
     {
-        if (nFeeRequired > pwalletMain->GetBalance())
-            return; // TODO ERROR MESSAGE
+        // TODO make pretty
+        QDialog error;
+        error.setWindowTitle(QString::fromStdString(strError));
+        error.exec();
+        return;
     }
+
     if (!pwalletMain->CommitTransaction(wtx, reserveKey))
-        return; // TODO ERROR MESSAGE
+    {
+        QDialog error;
+        error.setWindowTitle("Failed to commit wt transaction");
+        error.exec();
+        return;
+    }
 }
 
 void SidechainPage::on_addressBookButton_clicked()

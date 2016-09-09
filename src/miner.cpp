@@ -294,8 +294,10 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& s
 
         if (depositTX.vout.size()) {
             // Payout deposits from block reward
-            for (size_t i = 0; i < depositTX.vout.size(); i++)
+            for (size_t i = 0; i < depositTX.vout.size(); i++) {
+                txNew.vout.push_back(depositTX.vout[i]);
                 txNew.vout[0].nValue -= depositTX.vout[i].nValue;
+            }
         }
 
         if (wtJoinTX.vout.size()) {
@@ -571,13 +573,22 @@ CTransaction GetDepositTX(uint32_t nHeight)
     CMutableTransaction mtx;
 
     for (size_t i = 0; i < vDeposit.size(); i++) {
+
+       drivechainDeposit dup;
+       if (pdrivechaintree->GetDeposit(vDeposit[i].GetHash(), dup))
+           continue;
+
         // Create deposit DB entry
         mtx.vout.push_back(CTxOut(1000000, vDeposit[i].GetScript()));
 
         // Pay keyID the deposit
-        CScript script;
-        script << OP_DUP << OP_HASH160 << ToByteVector(vDeposit[i].keyID) << OP_EQUALVERIFY << OP_CHECKSIG;
-        mtx.vout.push_back(CTxOut(vDeposit[i].deposit.GetValueOutToDrivechain(), script));
+        for (size_t x = 0; x < vDeposit[i].deposit.vout.size(); x++) {
+            if (vDeposit[i].deposit.vout[x].scriptPubKey == SIDECHAIN_DEPOSITSCRIPT) {
+                CScript script;
+                script << OP_DUP << OP_HASH160 << ToByteVector(vDeposit[i].keyID) << OP_EQUALVERIFY << OP_CHECKSIG;
+                mtx.vout.push_back(CTxOut(vDeposit[i].deposit.vout[x].nValue, script));
+            }
+        }
     }
 
     return mtx;

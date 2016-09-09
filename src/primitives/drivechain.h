@@ -20,6 +20,9 @@ using namespace std;
 // uint256 hash (sidechainid) of THIS sidechain
 static const uint256 SIDECHAIN_ID = uint256S("0xca85db47c45dfccfa9f5562f7383c7b3fe1746017327371771ed3f70345b72d4");
 
+// Sidechain deposit script (used by mainchain to lock funds to this chain)
+static const CScript SIDECHAIN_DEPOSITSCRIPT = CScript() << OP_TRUE; // TODO UPDATE ON MAIN & HERE
+
 // mnPGuDbviWX4xR72mUXqVAJJUjj68Vh7eG
 // cQv4JP3XDivx3CjoSoe1dw2KtGr1KqLn7yLAe7gGK5ScaUedP6MS
 // "0201060ed986a0dda4caa2ed26a3d6c26f604811895a6ed3459fe3b5e3cec99b23"
@@ -76,7 +79,6 @@ struct drivechainDeposit : public drivechainObj {
 struct drivechainWithdraw : public drivechainObj {
     uint256 sidechainid;
     CKeyID keyID;
-    CTransaction wt;
 
     drivechainWithdraw(void) : drivechainObj() { drivechainop = 'W'; }
     virtual ~drivechainWithdraw(void) { }
@@ -88,7 +90,6 @@ struct drivechainWithdraw : public drivechainObj {
         READWRITE(drivechainop);
         READWRITE(sidechainid);
         READWRITE(keyID);
-        READWRITE(wt);
     }
 
     string ToString(void) const;
