@@ -654,16 +654,21 @@ CTransaction GetWTJoinTX(uint32_t nHeight)
     // Add inputs
     std::vector<drivechainDeposit> vDeposit = pdrivechaintree->GetDeposits();
     for (size_t x = 0; x < vDeposit.size(); x++) {
-        if (totalWithdraw == 0) break;
-        // Subtract deposit amount from total
-        totalWithdraw -= vDeposit[x].deposit.GetValueOutToDrivechain();
+        if (totalWithdraw <= 0) break;
 
         for (size_t y = 0; y < vDeposit[x].deposit.vout.size(); y++) {
-           CTxIn in(vDeposit[x].deposit.GetHash(), y);
-           mtx.vin.push_back(in);
+            // Skip non deposit output(s)
+            if (vDeposit[x].deposit.vout[y].scriptPubKey != SIDECHAIN_DEPOSITSCRIPT)
+                    continue;
+
+            totalWithdraw -= vDeposit[x].deposit.vout[y].nValue;
+
+            CTxIn in(vDeposit[x].deposit.GetHash(), y);
+            mtx.vin.push_back(in);
         }
 
-        // Erase deposit from DB TODO
+        // TODO Handle change when deposit output > WT^ output
+        // TODO Remove deposit with spent inputs from DB
     }
 
     return mtx;
