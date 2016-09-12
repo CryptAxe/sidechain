@@ -601,12 +601,25 @@ CTransaction GetWTJoinTX(uint32_t nHeight)
     // Get all of the wt(s)
     std::vector<drivechainWithdraw> vWithdraw = pdrivechaintree->GetWTs();
 
-    // TODO filter
-    // Filtered list of wt(s) to be joined for WT^
+    if (!vWithdraw.size()) return CTransaction();
+    if (nHeight % SIDECHAIN_TAU != 0) return CTransaction();
+
+    // Filter by height the list of wt(s) to be joined in WT^
     std::vector<drivechainWithdraw> toJoin;
+
+    uint32_t max = nHeight;
+    uint32_t min = max - SIDECHAIN_TAU;
+
     for (size_t i = 0; i < vWithdraw.size(); i++) {
+        if ((GetDrivechainObjectHeight(vWithdraw[i]) > max))
+            continue;
+        if ((GetDrivechainObjectHeight(vWithdraw[i]) < min))
+            continue;
+
         toJoin.push_back(vWithdraw[i]);
     }
+
+    if (!toJoin.size()) return CTransaction();
 
     // TODO calculate the min for each wt
     CAmount tempFee = 1000000;

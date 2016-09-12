@@ -17,6 +17,8 @@
 
 using namespace std;
 
+// TODO move to chainparams?
+
 // uint256 hash (sidechainid) of THIS sidechain
 static const uint256 SIDECHAIN_ID = uint256S("0xca85db47c45dfccfa9f5562f7383c7b3fe1746017327371771ed3f70345b72d4");
 
@@ -27,6 +29,9 @@ static const CScript SIDECHAIN_DEPOSITSCRIPT = CScript() << OP_TRUE; // TODO UPD
 // cQv4JP3XDivx3CjoSoe1dw2KtGr1KqLn7yLAe7gGK5ScaUedP6MS
 // "0201060ed986a0dda4caa2ed26a3d6c26f604811895a6ed3459fe3b5e3cec99b23"
 static const CScript SIDECHAIN_FEESCRIPT = CScript() << OP_DUP << OP_HASH160 << ParseHex("0201060ed986a0dda4caa2ed26a3d6c26f604811895a6ed3459fe3b5e3cec99b23") << OP_EQUALVERIFY << OP_CHECKSIG;
+
+// The number of blocks between WT^ creations (during this period wt's are submitted)
+static const uint32_t SIDECHAIN_TAU = 400;
 
 /**
  * Drivechain object for database
